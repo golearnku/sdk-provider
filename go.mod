@@ -1,4 +1,4 @@
-module github.com/my/repo
+module github.com/golearnku/sdk-provider
 
 go 1.14
 
