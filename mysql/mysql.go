@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 var (
@@ -16,11 +16,6 @@ var (
 	// ErrRecordNotFound returns a "record not found error". Occurs only when attempting to query the database with a struct; querying with a slice won't return this error
 	ErrRecordNotFound = gorm.ErrRecordNotFound
 )
-
-// IsRecordNotFoundError returns true if error contains a RecordNotFound error
-func IsRecordNotFoundError(err error) bool {
-	return gorm.IsRecordNotFoundError(err)
-}
 
 type Config struct {
 	DBName          string //数据库名称
@@ -42,7 +37,11 @@ type Mysql struct {
 //mysql ping
 func (mysql *Mysql) Ping() error {
 	if mysql.client != nil {
-		return mysql.client.DB().Ping()
+		db, err := mysql.client.DB()
+		if err != nil {
+			return err
+		}
+		return db.Ping()
 	}
 	return nil
 }
@@ -50,7 +49,11 @@ func (mysql *Mysql) Ping() error {
 //mysql close
 func (mysql *Mysql) Close() error {
 	if mysql.client != nil {
-		return mysql.client.DB().Close()
+		db, err := mysql.client.DB()
+		if err != nil {
+			return err
+		}
+		return db.Close()
 	}
 	return nil
 }
@@ -82,24 +85,26 @@ func NewInstance(config Config) (db *gorm.DB, err error) {
 	}
 
 	url := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=%s&parseTime=True&loc=Local", config.User, config.Password, config.Adds, config.DBName, charset)
-	db, err = gorm.Open("mysql", url)
+	db, err = gorm.Open(mysql.New(mysql.Config{
+		DSN: url, // data source name, refer https://github.com/go-sql-driver/mysql#dsn-data-source-name
+	}), &gorm.Config{})
 	if err != nil {
 		return
 	}
 
-	// 启用Logger，显示详细日志
-	db.LogMode(config.Debug)
+	sqlDB, err := db.DB()
+	if err != nil {
+		return
+	}
+
 	if config.ConnMaxLifetime > 0 {
-		db.DB().SetConnMaxLifetime(time.Second * time.Duration(config.ConnMaxLifetime))
+		sqlDB.SetConnMaxLifetime(time.Second * time.Duration(config.ConnMaxLifetime))
 	}
 	if config.MaxIdleConns > 0 {
-		db.DB().SetMaxIdleConns(config.MaxIdleConns)
+		sqlDB.SetMaxIdleConns(config.MaxIdleConns)
 	}
 	if config.MaxOpenConns > 0 {
-		db.DB().SetMaxOpenConns(config.MaxOpenConns)
-	}
-	if config.SingularTable {
-		db.SingularTable(true)
+		sqlDB.SetMaxOpenConns(config.MaxOpenConns)
 	}
 	return
 }
