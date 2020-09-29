@@ -28,6 +28,7 @@ type Config struct {
 	MaxIdleConns    int    //设置连接池空闲时的最大连接数
 	MaxOpenConns    int    //设置数据库的最大打开连接数
 	SingularTable   bool   //关闭复数表名，如果设置为true，`User`表的表名就会是`user`，而不是`users`
+	gorm.Config
 }
 
 type Mysql struct {
@@ -87,7 +88,9 @@ func NewInstance(config Config) (db *gorm.DB, err error) {
 	url := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=%s&parseTime=True&loc=Local", config.User, config.Password, config.Adds, config.DBName, charset)
 	db, err = gorm.Open(mysql.New(mysql.Config{
 		DSN: url, // data source name, refer https://github.com/go-sql-driver/mysql#dsn-data-source-name
-	}), &gorm.Config{})
+	}), &gorm.Config{
+
+	})
 	if err != nil {
 		return
 	}
