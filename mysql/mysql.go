@@ -100,9 +100,6 @@ func NewInstance(config Config) (db *gorm.DB, err error) {
 		return
 	}
 
-	if config.Debug {
-		db.Debug()
-	}
 	if config.ConnMaxLifetime > 0 {
 		sqlDB.SetConnMaxLifetime(time.Second * time.Duration(config.ConnMaxLifetime))
 	}
